@@ -52,7 +52,15 @@ def mouse_callback_obj(event, x, y, flags, param):
             length_cm = (length_px / reference_length_px) * 29.7  # Convert pixels to cm using reference scale
             breadth_cm = (breadth_px / reference_breadth_px) * 21  # Convert pixels to cm using reference scale
             print(f"Object dimensions: Length: {length_cm} cm, Breadth: {breadth_cm} cm")
+            # Draw dimensions on the frame
+            draw_dimensions(frame, length_cm, breadth_cm)
+
     mouse_position = (x, y)
+
+# Function to draw length and breadth on the frame
+def draw_dimensions(frame, length_cm, breadth_cm):
+    cv2.putText(frame, f"Length: {length_cm:.2f} cm", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+    cv2.putText(frame, f"Breadth: {breadth_cm:.2f} cm", (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
 # Calculate length and breadth of rectangle
 def calculate_length_breadth(point1, point2):
@@ -81,6 +89,12 @@ while True:
     # Draw object rectangle if both points are selected
     if point1_obj and point2_obj:
         cv2.rectangle(frame, point1_obj, point2_obj, (255, 0, 0), 2)
+        # Calculate dimensions
+        length_px, breadth_px = calculate_length_breadth(point1_obj, point2_obj)
+        length_cm = (length_px / reference_length_px) * 29.7  # Convert pixels to cm using reference scale
+        breadth_cm = (breadth_px / reference_breadth_px) * 21  # Convert pixels to cm using reference scale
+        # Draw dimensions on the frame
+        draw_dimensions(frame, length_cm, breadth_cm)
 
     # Draw crosshair at mouse position
     cv2.line(frame, (mouse_position[0], 0), (mouse_position[0], window_size[1]), (0, 255, 255), 1)
