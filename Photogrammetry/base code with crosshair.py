@@ -11,6 +11,18 @@ reference_length_px = None
 reference_breadth_px = None
 mouse_position = (0, 0)
 
+# Function to reset selected points
+def reset_points():
+    global point1_ref, point2_ref, point1_obj, point2_obj, clicked_ref, clicked_obj, reference_length_px, reference_breadth_px
+    point1_ref = None
+    point2_ref = None
+    point1_obj = None
+    point2_obj = None
+    clicked_ref = False
+    clicked_obj = False
+    reference_length_px = None
+    reference_breadth_px = None
+
 # Function to handle mouse events for reference rectangle
 def mouse_callback_ref(event, x, y, flags, param):
     global point1_ref, point2_ref, clicked_ref, reference_length_px, reference_breadth_px, mouse_position
@@ -48,16 +60,19 @@ def calculate_length_breadth(point1, point2):
     breadth = abs(point2[1] - point1[1])
     return length, breadth
 
-# Open webcam with increased frame size
+# Open webcam
 cap = cv2.VideoCapture(0)
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)  # Set width to 1280 pixels
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)  # Set height to 720 pixels
 
-cv2.namedWindow('Webcam')
+cv2.namedWindow('Webcam', cv2.WINDOW_NORMAL)  # Create a resizable window
+cv2.resizeWindow('Webcam', 800, 600)  # Initial size
+
 cv2.setMouseCallback('Webcam', mouse_callback_ref)  # Use reference mouse callback initially
 
 while True:
     ret, frame = cap.read()
+
+    # Get the size of the window
+    window_size = cv2.getWindowImageRect('Webcam')[2:]
 
     # Draw reference rectangle if both points are selected
     if point1_ref and point2_ref:
@@ -68,8 +83,8 @@ while True:
         cv2.rectangle(frame, point1_obj, point2_obj, (255, 0, 0), 2)
 
     # Draw crosshair at mouse position
-    cv2.line(frame, (mouse_position[0], 0), (mouse_position[0], frame.shape[0]), (0, 255, 255), 1)
-    cv2.line(frame, (0, mouse_position[1]), (frame.shape[1], mouse_position[1]), (0, 255, 255), 1)
+    cv2.line(frame, (mouse_position[0], 0), (mouse_position[0], window_size[1]), (0, 255, 255), 1)
+    cv2.line(frame, (0, mouse_position[1]), (window_size[0], mouse_position[1]), (0, 255, 255), 1)
 
     cv2.imshow('Webcam', frame)
 
@@ -77,8 +92,11 @@ while True:
     if reference_length_px is not None and reference_breadth_px is not None:
         cv2.setMouseCallback('Webcam', mouse_callback_obj)
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    key = cv2.waitKey(1)
+    if key & 0xFF == ord('q'):
         break
+    elif key & 0xFF == ord('r'):
+        reset_points()
 
 cap.release()
 cv2.destroyAllWindows()
