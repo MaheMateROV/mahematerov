@@ -53,6 +53,7 @@ void loop() {
     String data = Serial.readString();
 
     if (data == "Expand") {
+
       button();
       }
     else if (data == "Start"){
