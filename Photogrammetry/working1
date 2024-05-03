@@ -1,0 +1,130 @@
+import cv2
+
+# Global variables to store the selected points and mouse position
+point1_ref = None
+point2_ref = None
+point1_obj = None
+point2_obj = None
+clicked_ref = False
+clicked_obj = False
+reference_length_px = None
+reference_breadth_px = None
+mouse_position = (0, 0)
+reference_drawn = False
+
+# Function to reset selected points
+def reset_points():
+    global point1_ref, point2_ref, point1_obj, point2_obj, clicked_ref, clicked_obj, reference_length_px, reference_breadth_px, reference_drawn
+    point1_ref = None
+    point2_ref = None
+    point1_obj = None
+    point2_obj = None
+    clicked_ref = False
+    clicked_obj = False
+    reference_length_px = None
+    reference_breadth_px = None
+    reference_drawn = False
+    cv2.setMouseCallback('Captured Image', mouse_callback_ref)  # Switch back to reference mouse callback
+
+# Function to handle mouse events for reference rectangle
+def mouse_callback_ref(event, x, y, flags, param):
+    global point1_ref, point2_ref, clicked_ref, reference_length_px, reference_breadth_px, mouse_position, reference_drawn
+
+    if event == cv2.EVENT_LBUTTONDOWN:
+        if not clicked_ref:
+            point1_ref = (x, y)
+            clicked_ref = True
+        else:
+            point2_ref = (x, y)
+            clicked_ref = False
+            reference_length_px, reference_breadth_px = calculate_length_breadth(point1_ref, point2_ref)
+            reference_drawn = True
+            cv2.setMouseCallback('Captured Image', mouse_callback_obj)  # Switch to object mouse callback
+    mouse_position = (x, y)
+
+# Function to handle mouse events for object rectangle
+def mouse_callback_obj(event, x, y, flags, param):
+    global point1_obj, point2_obj, clicked_obj, mouse_position
+
+    if reference_drawn:
+        if event == cv2.EVENT_LBUTTONDOWN:
+            if not clicked_obj:
+                point1_obj = (x, y)
+                clicked_obj = True
+            else:
+                point2_obj = (x, y)
+                clicked_obj = False
+
+        mouse_position = (x, y)
+
+# Function to draw length and breadth on the frame
+def draw_dimensions(frame, length_cm, breadth_cm, point1, point2):
+    cv2.putText(frame, f"Length: {length_cm:.2f} cm", (point1[0], point1[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+    cv2.putText(frame, f"Breadth: {breadth_cm:.2f} cm", (point2[0], point2[1] + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+
+# Calculate length and breadth of rectangle
+def calculate_length_breadth(point1, point2):
+    length = abs(point2[0] - point1[0])
+    breadth = abs(point2[1] - point1[1])
+    return length, breadth
+
+# Function to process the captured image
+def process_captured_image(image_path):
+    # Load the captured image
+    frame = cv2.imread(image_path)
+
+    cv2.namedWindow('Captured Image', cv2.WINDOW_NORMAL)  # Create a resizable window
+    cv2.resizeWindow('Captured Image', 1280, 720)  # Initial size
+
+    cv2.setMouseCallback('Captured Image', mouse_callback_ref)  # Use reference mouse callback initially
+
+    while True:
+        # Get the size of the window
+        window_size = cv2.getWindowImageRect('Captured Image')[2:]
+
+        # Reset the frame for drawing
+        frame_copy = frame.copy()
+
+        # Draw reference rectangle if both points are selected
+        if point1_ref and point2_ref:
+            cv2.rectangle(frame_copy, point1_ref, point2_ref, (0, 255, 0), 2)
+
+        # Draw object rectangle if both points are selected
+        if point1_obj and point2_obj:
+            cv2.rectangle(frame_copy, point1_obj, point2_obj, (255, 0, 0), 2)
+            # Calculate dimensions
+            length_px, breadth_px = calculate_length_breadth(point1_obj, point2_obj)
+            length_cm = (length_px / reference_length_px) * 29.7  # Convert pixels to cm using reference scale
+            breadth_cm = (breadth_px / reference_breadth_px) * 21  # Convert pixels to cm using reference scale
+            # Draw dimensions on the frame
+            draw_dimensions(frame_copy, length_cm, breadth_cm, point1_obj, point2_obj)
+
+        # Draw crosshair at mouse position
+        cv2.line(frame_copy, (mouse_position[0], 0), (mouse_position[0], window_size[1]), (0, 255, 255), 1)
+        cv2.line(frame_copy, (0, mouse_position[1]), (window_size[0], mouse_position[1]), (0, 255, 255), 1)
+
+        # Show the frame
+        cv2.imshow('Captured Image', frame_copy)
+
+        # Check for key press
+        key = cv2.waitKey(1)
+        if key == ord('q'):
+            break
+        elif key == ord('r'):
+            reset_points()
+
+    cv2.destroyAllWindows()
+
+# Display the webcam feed
+cap = cv2.VideoCapture(0)
+while True:
+    ret, frame = cap.read()
+    cv2.imshow('Webcam Feed', frame)
+    if cv2.waitKey(1) & 0xFF == ord('p'):
+        cv2.imwrite("captured_image.jpg", frame)  # Save captured image
+        break
+cap.release()
+cv2.destroyAllWindows()
+
+# Process the captured image
+process_captured_image("captured_image.jpg")
