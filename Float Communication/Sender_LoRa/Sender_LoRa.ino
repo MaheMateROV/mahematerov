@@ -6,15 +6,15 @@
 #include <WiFiUdp.h>
 #include <Wire.h>
 #include "MS5837.h"
+#include <TimeLib.h>
 
 MS5837 sensor;
-
 int relay1 = 21;
 int relay2 = 22;
-int upbutton = 34;
-int downbutton = 35;
-const char* ssid = "MU-STUDENT-1";
-const char* password = "mahedubai";
+int upbutton=30;
+int downbutton = 30;
+const char* ssid = "dlink-M960-2.4G-347a";
+const char* password = "jcvji36474";
 int counter1 = 0;
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org");
@@ -38,6 +38,9 @@ String d;
 #define SDCARD_CS 13
 
 File myFile;
+unsigned long lastWifiConnectAttempt = 0;
+unsigned long wifiConnectTimeout = 5000; // 5 seconds timeout
+unsigned long startTime = 0;
 int naye = 0;
 int naye1 = 0;
 int naye2 = 0;
@@ -70,29 +73,37 @@ void setup() {
   //sensor.setModel(MS5837::MS5837_30BA);
 
   sensor.setFluidDensity(997); // kg/m^3 (freshwater, 1029 for seawater)
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
+  startTime = millis(); // Get start time for timeout calculation
+
+  // Connect to WiFi
+  while (WiFi.status() != WL_CONNECTED && (millis() - startTime) < wifiConnectTimeout) {
+    delay(500);
     Serial.println("Connecting to WiFi...");
   }
-  Serial.println("Connected to WiFi");
 
-  // Initialize NTP client
-  timeClient.begin();
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("Connected to WiFi");
 
-  // Wait for synchronization
-  while (!timeClient.update()) {
-    timeClient.forceUpdate();
-    delay(100);
+    // Initialize NTP client
+    timeClient.begin();
+
+    // Wait for synchronization
+    while (!timeClient.update()) {
+      timeClient.forceUpdate();
+      delay(100);
+    }
+
+    // Add timezone offset
+    timeClient.setTimeOffset(4 * 3600);  // GMT+4 in seconds
+
+    // Print current time adjusted for timezone
+    Serial.println(timeClient.getFormattedTime());
+
+    WiFi.disconnect(true);  // Disconnect from WiFi after getting time
+  } else {
+    Serial.println("Failed to connect to WiFi. Setting default time to 00:00:00");
+    setTime(0); // Set default time to 00:00:00 if WiFi connection fails
   }
-  // Add timezone offset
-  timeClient.setTimeOffset(4 * 3600);  // GMT+4 in seconds
-
-  // Print current time adjusted for timezone
-  Serial.println(timeClient.getFormattedTime());
-
-  // Disconnect from WiFi
-  WiFi.disconnect(true);
   while (!Serial)
     ;
   Serial.println("LoRa Receiver");
@@ -136,9 +147,12 @@ void loop() {
         executeCode2();
         break;
       }
-    }
-
-    // print RSSI of packet
+      else if (LoRaData.startsWith("hi")){
+        upbutton=LoRaData.substring(2).toInt();
+        downbutton=LoRaData.substring(2).toInt();
+        break;
+      }
+    }// print RSSI of packet
     Serial.print("' with RSSI ");
     Serial.println(LoRa.packetRssi());
   }
@@ -146,6 +160,9 @@ void loop() {
 }
 
 void executeCode() {
+  int naye=0;
+  int naye1=0;
+  int naye2=0;
   int total=6;
   counter=0;
   SPI.end();
@@ -169,17 +186,17 @@ void executeCode() {
   digitalWrite(relay2, HIGH);  // turn relay 2 OFF
   // if the file opened okay, write to it:
   if (myFile) {
-    while (digitalRead(upbutton) == LOW) {
+    while (naye<upbutton) {
       Serial.print(digitalRead(upbutton));
       Serial.print("Writing to test.txt...");
       if (naye % 5 == 0) {
         sensor.read();
-        myFile.println("Jalpari,"+timeClient.getFormattedTime() + ","+sensor.pressure()+","+sensor.depth());
+        total++;
+        myFile.println("Jalpari,"+timeClient.getFormattedTime() + ","+(sensor.pressure()/10)+","+sensor.depth());
       }
       // close the file:
       Serial.println("done.");
       naye++;
-      total++;
       delay(1000);
     }
     Serial.print("finished");
@@ -193,11 +210,11 @@ void executeCode() {
   digitalWrite(relay1, LOW);  // turn relay 1 ON
   digitalWrite(relay2, LOW);  // turn relay 2 OFF
   if (myFile) {
-    while (naye1 <= 5) {
+    while (naye1 <= 2) {
       Serial.print("Writing to test.txt...");
       if (naye1 % 5== 0) {
         sensor.read();
-        myFile.println("Jalpari,"+timeClient.getFormattedTime() + ","+sensor.pressure()+","+sensor.depth());
+        myFile.println("Jalpari,"+timeClient.getFormattedTime() + ","+(sensor.pressure()/10)+","+sensor.depth());
       }
       // close the file:
       Serial.println("done.");
@@ -213,17 +230,18 @@ void executeCode() {
   digitalWrite(relay1, HIGH);  // turn relay 1 ON
   digitalWrite(relay2, LOW);   // turn relay 2 OFF
   if (myFile) {
-    while (digitalRead(downbutton) == LOW) {
+    while (naye2<downbutton) {
       Serial.print(digitalRead(downbutton));
       Serial.print("Writing to test.txt...");
-      if (naye2 % 5 == 0) {
+      if ((naye2+3) % 5 == 0) {
         sensor.read();
-        myFile.println("Jalpari,"+timeClient.getFormattedTime() + ","+sensor.pressure()+","+sensor.depth());
+        total++;
+        myFile.println("Jalpari,"+timeClient.getFormattedTime() + ","+(sensor.pressure()/10)+","+sensor.depth());
       }
       // close the file:
       Serial.println("done.");
       naye2++;
-      total++;
+      
       delay(1000);
     }
     myFile.close();
@@ -233,7 +251,7 @@ void executeCode() {
   }
   digitalWrite(relay1, LOW);  // turn relay 1 ON
   digitalWrite(relay2, LOW);  // turn relay 2 OFF
-  delay(5000);
+  delay(1000);
 
   if (SDCARD_CS > 0) {
     if (!SD.begin(SDCARD_CS, sdSPI)) {
@@ -248,7 +266,7 @@ void executeCode() {
           array[counter] = data1;
           data1 = "";
           counter++;
-          delay(1000);
+          delay(200);
         } else {
           data1 += c;
         }
@@ -274,7 +292,6 @@ void executeCode() {
   Serial.println("LoRa Initializing OK!");
   Serial.print(total);
   for (int i = 0; i <= total; i++) {
-    
     if (array[i] != "") {
       LoRa.beginPacket();
       Serial.print(array[i]);
@@ -283,7 +300,7 @@ void executeCode() {
       LoRa.endPacket();
     }
    
-    delay(100);
+    delay(200);
     
   }
   LoRa.beginPacket();
@@ -291,17 +308,18 @@ void executeCode() {
   LoRa.endPacket();
   delay(1000);
   naye1=0;
-  
-
 }
 
 void executeCode2()
 {
   for (int k=0;k<3;k++){
+    sensor.read();
     LoRa.beginPacket();
-    LoRa.print("Jalpari,"+timeClient.getFormattedTime() + ","+sensor.pressure()+","+sensor.depth());
+    LoRa.print("Jalpari,"+timeClient.getFormattedTime() + ","+(sensor.pressure()/10)+","+sensor.depth());
+    LoRa.print("\n");
+    Serial.print("Jalpari,"+timeClient.getFormattedTime() + ","+(sensor.pressure()/10)+","+sensor.depth());
     LoRa.endPacket();
-    delay(5000);
+    delay(1000);
 
   }
   LoRa.beginPacket();

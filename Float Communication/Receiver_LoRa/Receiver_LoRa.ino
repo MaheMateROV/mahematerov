@@ -14,6 +14,7 @@
 #define MISO 19
 #define MOSI 27
 int counter=0;
+String uptimeValue;
 
 void setup() {
   //initialize Serial Monitor
@@ -56,10 +57,15 @@ void loop() {
       }
     else if (data == "Start"){
       button1();
+    }
+    else if (data.startsWith("uptime")){
+      uptimeValue = data.substring(6).toInt();
+      button2();
+    }
   }
   // try to parse packet
   
-}
+
 delay(1000);
 
 }
@@ -82,7 +88,7 @@ void button()
   int packetSize = LoRa.parsePacket();
   if (packetSize) {
     // received a packet
-    Serial.print("Received packet '");
+    Serial.print("Received packet ");
 
     // read packet
     while (LoRa.available()) {
@@ -126,7 +132,7 @@ void button1()
   int packetSize = LoRa.parsePacket();
   if (packetSize) {
     // received a packet
-    Serial.print("Received packet '");
+    Serial.print("Received packet ");
 
     // read packet
     while (LoRa.available()) {
@@ -150,4 +156,19 @@ void button1()
   }
   }
 
+}
+void button2()
+{
+  LoRa.beginPacket();
+  LoRa.print("hi"+uptimeValue);
+  LoRa.endPacket();
+  delay(100);
+  LoRa.beginPacket();
+  LoRa.print("hi"+uptimeValue);
+  LoRa.endPacket();
+  delay(100);
+  LoRa.beginPacket();
+  LoRa.print("hi"+uptimeValue);
+  LoRa.endPacket();
+  delay(100);
 }
