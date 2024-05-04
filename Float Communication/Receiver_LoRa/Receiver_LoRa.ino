@@ -47,6 +47,7 @@ void setup() {
 
 void loop() {
   counter=0;
+  digitalWrite(2,LOW);
   
   if (Serial.available()) {
     
@@ -72,10 +73,7 @@ delay(1000);
 }
 void button()
 {
-  digitalWrite(2,HIGH);
-  LoRa.beginPacket();
-  LoRa.print("he");
-  LoRa.endPacket();
+  send_ack();
   delay(100);
   LoRa.beginPacket();
   LoRa.print("he");
@@ -85,6 +83,11 @@ void button()
   LoRa.print("he");
   LoRa.endPacket();
   delay(100);
+  LoRa.beginPacket();
+  LoRa.print("he");
+  LoRa.endPacket();
+  delay(100);
+  
   while(counter==0){
   int packetSize = LoRa.parsePacket();
   if (packetSize) {
@@ -116,7 +119,8 @@ void button()
 }
 void button1()
 {
-  digitalWrite(2,HIGH);
+  send_ack();
+  delay(100);
   LoRa.beginPacket();
   LoRa.print("ha");
   LoRa.endPacket();
@@ -160,6 +164,7 @@ void button1()
 }
 void button2()
 {
+  send_ack();
   LoRa.beginPacket();
   LoRa.print("hi"+uptimeValue);
   LoRa.endPacket();
@@ -171,5 +176,10 @@ void button2()
   LoRa.beginPacket();
   LoRa.print("hi"+uptimeValue);
   LoRa.endPacket();
+  delay(100);
+}
+void send_ack() {
+  digitalWrite(2,HIGH);
+  Serial.print("ACK\n");
   delay(100);
 }

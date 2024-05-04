@@ -312,6 +312,9 @@ void executeCode() {
 
 void executeCode2()
 {
+  LoRa.beginPacket();
+  LoRa.print("\n");
+  LoRa.endPacket();
   for (int k=0;k<3;k++){
     sensor.read();
     LoRa.beginPacket();

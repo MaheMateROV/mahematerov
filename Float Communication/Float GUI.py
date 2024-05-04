@@ -6,7 +6,32 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 uptime1=0
 # Create a serial object
 ser = serial.Serial('COM6', 115200)
+global ack_received
+def receive_ack():
+        ack_received=False
+        start_time = time.time()
+        while time.time() - start_time < 3:  # Wait for up to 5 seconds for acknowledgment
+            if ser.in_waiting > 0:
+                ack = ser.readline().decode().strip()
+                print(ack)
+                if ack == "ACK":  # Define the acknowledgment message used by Arduino
+                    print("reached")
+                    ack_received = True
+                    break
+        return ack_received
 def main_window():
+    def receive_ack():
+        ack_received=False
+        start_time = time.time()
+        while time.time() - start_time < 3:  # Wait for up to 5 seconds for acknowledgment
+            if ser.in_waiting > 0:
+                ack = ser.readline().decode().strip()
+                print(ack)
+                if ack == "ACK":  # Define the acknowledgment message used by Arduino
+                    print("reached")
+                    ack_received = True
+                    break
+        return ack_received
     # Create a Tkinter window
     root = tk.Tk()
     root.title("Jalpari")
@@ -52,42 +77,49 @@ def main_window():
         ser.write(b'Expand')  # Send 'Expand' command
         
         # Record start time
-        start_time = time.time()
-        
-        # Initialize data
-        data1 = ''
-        # Keep checking for data from serial for 30 seconds
-        while time.time() - start_time < (15+(2*uptime1)):
-            if ser.in_waiting > 0:
-                data = ser.readline().decode().strip()  # Read data from serial
-                print(data)
-                data1 += data + '\n'
-                    
-        # Split the data1 into lines
-        lines = data1.split('\n')
-        
-        # Extract and store desired values
-        for line in lines:
-            if line.startswith("Received packet "):
-                parts = line.split(",")
-                if len(parts) >= 4:
-                    name_parts = parts[0].split(" ")
-                    name = name_parts[2]
-                    team_name.set(name)# Skip the first two parts
-                    timeaa = parts[1]
-                    pressure_value = parts[2]
-                    depth_value = parts[3].split()[0]
-                    print(f"Name: {name}, Time: {timeaa}, Pressure Value: {pressure_value}, Depth Value: {depth_value}")
-                    
-                    # Append data to lists
-                    depth_values.append(float(depth_value))
-                    time_values.append(timeaa)
-                    
-                    # Update table
-                    table.insert(tk.END, f"{timeaa}\t{depth_value}\t{pressure_value}\n")
-        
-        # Plot the graph
-        plot_graph()
+        if receive_ack:
+            print("Start command acknowledged by Arduino.")
+            start_time = time.time()
+            
+            # Initialize data
+            data1 = ''
+            # Keep checking for data from serial for 30 seconds
+            while time.time() - start_time < (15+(2*uptime1)):
+                if ser.in_waiting > 0:
+                    data = ser.readline().decode().strip()  # Read data from serial
+                    print(data)
+                    data1 += data + '\n'
+                        
+            # Split the data1 into lines
+            lines = data1.split('\n')
+            checker2.config(text="Received")
+            
+            # Extract and store desired values
+            for line in lines:
+                if line.startswith("Received packet "):
+                    parts = line.split(",")
+                    if len(parts) >= 4:
+                        name_parts = parts[0].split(" ")
+                        name = name_parts[2]
+                        team_name.set(name)# Skip the first two parts
+                        timeaa = parts[1]
+                        pressure_value = parts[2]
+                        depth_value = parts[3].split()[0]
+                        print(f"Name: {name}, Time: {timeaa}, Pressure Value: {pressure_value}, Depth Value: {depth_value}")
+                        
+                        # Append data to lists
+                        depth_values.append(float(depth_value))
+                        time_values.append(timeaa)
+                        
+                        # Update table
+                        table.insert(tk.END, f"{timeaa}\t{depth_value}\t{pressure_value}\n")
+            
+            # Plot the graph
+            plot_graph()
+            ack_received=False
+        else:
+            checker2.config(text="Not Received")
+            print("Start command not acknowledged by Arduino. Please check the connection.")
 
     def plot_graph():
         # Plot the graph
@@ -108,37 +140,44 @@ def main_window():
         depth_values.clear()
         time_values.clear()
         
-        ser.write(b'Start')  # Send 'Expand' command
-        
-        # Record start time
-        start_time = time.time()
-        
-        # Initialize data
-        data1 = ''
-        
-        # Keep checking for data from serial for 30 seconds
-        while time.time() - start_time < 5:
-            if ser.in_waiting > 0:
-                data = ser.readline().decode().strip()  # Read data from serial
-                print(data)
-                data1 += data + '\n'
-                
-        
-        # Split the data1 into lines
-        lines = data1.split('\n')
-        
-        # Extract and display data
-        for line in lines:
-            if line.startswith("Received packet "):
-                parts = line.split(",")
-                if len(parts) >= 4:
-                    name_parts = parts[0].split(" ")
-                    name = name_parts[2]
-                    team_name.set(name)# Skip the first two parts
-                    timeaa = parts[1]
-                    pressure_value = parts[2]
-                    depth_value = parts[3].split()[0]
-                    table.insert(tk.END, f"{timeaa}\t{depth_value}\t{pressure_value}\n")
+        ser.write(b'Start')  # Send 'Start' command
+        # Wait for acknowledgment from Arduino
+        if receive_ack():
+            print("Start command acknowledged by Arduino.")
+            # Record start time
+            start_time = time.time()
+            
+            # Initialize data
+            data1 = ''
+            
+            # Keep checking for data from serial for 30 seconds
+            while time.time() - start_time < 5:
+                if ser.in_waiting > 0:
+                    data = ser.readline().decode().strip()  # Read data from serial
+                    print(data)
+                    data1 += data + '\n'
+            
+            # Split the data1 into lines
+            lines = data1.split('\n')
+            checker1.config(text="Received")
+            # Extract and display data
+            for line in lines:
+                if line.startswith("Received packet "):
+                    parts = line.split(",")
+                    if len(parts) >= 4:
+                        name_parts = parts[0].split(" ")
+                        name = name_parts[2]
+                        team_name.set(name)  # Skip the first two parts
+                        timeaa = parts[1]
+                        pressure_value = parts[2]
+                        depth_value = parts[3].split()[0]
+                        table.insert(tk.END, f"{timeaa}\t{depth_value}\t{pressure_value}\n")
+            ack_received=False
+
+        else:
+            checker1.config(text="Not Received")
+            print("Start command not acknowledged by Arduino. Please check the connection.")
+
 
     # Create a 'Start' button
     start_button = tk.Button(root, text="Start", command=start, height=2, width=10, font=("Arial", 15))
@@ -147,6 +186,10 @@ def main_window():
     # Create a 'Expand' button
     expand_button = tk.Button(root, text="Up/Down Traverse", command=send_yes, height=2, width=20, font=("Arial", 15))
     expand_button.grid(row=2, column=1, pady=20, padx=20)
+    checker1=tk.Label(root,font=("Arial",20))
+    checker1.grid(row=3,column=0,pady=20,padx=20)
+    checker2=tk.Label(root,font=("Arial",20))
+    checker2.grid(row=3,column=1,pady=20,padx=20)
 
 
     # Run the Tkinter event loop
@@ -158,8 +201,14 @@ def entry():
     uptime_v="uptime"+uptime_entry.get()+"\n"
     uptime_value=uptime_v.encode('utf-8')
     ser.write(uptime_value)
-    uptime_window.destroy()
-    main_window()
+    if receive_ack():
+        checker3.config(text="Worked")
+        uptime_window.destroy()
+        main_window()
+        ack_received=False
+    else:
+        checker3.config(text="Not Worked")
+        
 
 uptime_window=tk.Tk()
 uptime_window.title("Enter Uptime")
@@ -167,10 +216,14 @@ uptime_window.geometry("1920x1080")
 uptime_label = tk.Label(uptime_window, text="Enter Uptime:", font=("Arial", 20))
 uptime_label.pack(pady=20)
 
+
 uptime_entry = tk.Entry(uptime_window, font=("Arial", 20))
 uptime_entry.pack(pady=20)
 
 uptime_button = tk.Button(uptime_window, text="Submit", command=entry, font=("Arial", 15))
 uptime_button.pack(pady=20)
+checker3 = tk.Label(uptime_window, font=("Arial", 20))
+checker3.pack(pady=20)
 uptime_window.mainloop()
+
 
