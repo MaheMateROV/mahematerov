@@ -10,7 +10,7 @@ server_ip = "192.168.2.20"
 PORT = 12345
 
 # Global list to hold the status of each button set
-button_status = [0, 0, 0, 0, 0]
+button_status = [0, 0, 0, 0]
 server_running = False
 server_socket = None
 
@@ -36,7 +36,7 @@ def update_button_colors():
 def on_press(key):
     try:
         key_index = int(key.char)
-        if 1 <= key_index <= 9:
+        if 1 <= key_index <= 8:
             # Map number keys to alternating between front and back buttons
             set_index = (key_index - 1) // 2
             if key_index % 2 == 1:
@@ -54,7 +54,7 @@ def on_press(key):
 def on_release(key):
     try:
         key_index = int(key.char)
-        if 1 <= key_index <= 9:
+        if 1 <= key_index <= 8:
             # Map number keys to alternating between front and back buttons
             set_index = (key_index - 1) // 2
             update_status(set_index, 0)
@@ -124,7 +124,7 @@ def main():
     back_buttons = []
 
     # Create 5 sets of front and back buttons
-    for i in range(5):
+    for i in range(4):
         # Create a frame for each set of buttons
         frame = tk.Frame(all_frames)
         frame.pack(side=tk.LEFT, padx=(0, 20), pady=5)  # Adjust padx for spacing between sets
