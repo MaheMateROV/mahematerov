@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 uptime1=0
 # Create a serial object
-ser = serial.Serial('COM6', 115200)
+ser = serial.Serial('COM5', 115200)
 global ack_received
 def receive_ack():
         ack_received=False
@@ -46,7 +46,7 @@ def main_window():
 
     # Function to add column headers
     def add_headers():
-        table.insert(tk.END, "Time\tDepth(m)\tPressure(MPa)\n")
+        table.insert(tk.END, "Time\tDepth(m)\tPressure(Pa)\n")
 
     # Create a table with a text box displaying team name and columns for time, depth, and pressure
     team_name_label = tk.Label(root, text="Team Name:", font=("Arial", 20))
@@ -60,7 +60,10 @@ def main_window():
 
     # Add headers initially
     add_headers()
-
+    def barelyup():
+            ser.write(b'Barelyup')
+    def barelydown():
+            ser.write(b'Barelydown')
     # Create a function to clear the table
     def clear_table():
         table.delete('1.0', tk.END)
@@ -192,6 +195,10 @@ def main_window():
     # Create a 'Expand' button
     expand_button = tk.Button(root, text="Up/Down Traverse", command=send_yes, height=2, width=20, font=("Arial", 15))
     expand_button.grid(row=2, column=1, pady=20, padx=20)
+    barelyup = tk.Button(root, text="Barely Up", command=barelyup, height=2, width=20, font=("Arial", 15))
+    barelyup.grid(row=2, column=2, pady=20, padx=20)
+    barelydown = tk.Button(root, text="Barely Down", command=barelydown, height=2, width=20, font=("Arial", 15))
+    barelydown.grid(row=2, column=3, pady=20, padx=20)
     checker1=tk.Label(root,font=("Arial",20))
     checker1.grid(row=3,column=0,pady=20,padx=20)
     checker2=tk.Label(root,font=("Arial",20))
