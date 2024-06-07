@@ -9,9 +9,12 @@
 #include <TimeLib.h>
 
 MS5837 sensor;
-int relay1 = 21;
-int relay2 = 22;
-int upbutton=30;
+unsigned long lastTime = 0; // Variable to store the last time the file was written
+unsigned long currentTime;
+
+int relay1=12;
+int relay2=4;
+int upbutton=3;
 int downbutton = 30;
 const char* ssid = "dlink-M960-2.4G-347a";
 const char* password = "jcvji36474";
@@ -41,12 +44,14 @@ File myFile;
 unsigned long lastWifiConnectAttempt = 0;
 unsigned long wifiConnectTimeout = 5000; // 5 seconds timeout
 unsigned long startTime = 0;
-int naye = 0;
-int naye1 = 0;
-int naye2 = 0;
+float naye = 0;
+float naye1 = 0;
+float naye2 = 0;
 int counter = 0;
 
 void setup() {
+  pinMode(25,OUTPUT);
+  digitalWrite(25,HIGH);
   pinMode(relay1, OUTPUT);  // set pin as output for relay 1
   pinMode(relay2, OUTPUT);  // set pin as output for relay 2
   pinMode(upbutton, INPUT);
@@ -54,8 +59,8 @@ void setup() {
   pinMode(12, OUTPUT);
 
   // keep the motor off by keeping both HIGH
-  digitalWrite(relay1, LOW);
-  digitalWrite(relay2, LOW);
+  digitalWrite(relay1, HIGH);
+  digitalWrite(relay2, HIGH);
   digitalWrite(12, HIGH);
 
   Serial.begin(115200);
@@ -70,7 +75,7 @@ void setup() {
 
   // .init sets the sensor model for us but we can override it if required.
   // Uncomment the next line to force the sensor model to the MS5837_30BA.
-  //sensor.setModel(MS5837::MS5837_30BA);
+  sensor.setModel(MS5837::MS5837_30BA);
 
   sensor.setFluidDensity(997); // kg/m^3 (freshwater, 1029 for seawater)
   startTime = millis(); // Get start time for timeout calculation
@@ -152,6 +157,12 @@ void loop() {
         downbutton=LoRaData.substring(2).toInt();
         break;
       }
+      else if (LoRaData=="ho"){
+        executeCode3();
+      }
+      else if (LoRaData=="hoe"){
+        executeCode4();
+      }
     }// print RSSI of packet
     Serial.print("' with RSSI ");
     Serial.println(LoRa.packetRssi());
@@ -182,18 +193,43 @@ void executeCode() {
   myFile = SD.open("/test.txt", FILE_WRITE);
   myFile.close(); 
   myFile = SD.open("/test.txt", FILE_APPEND);
-  digitalWrite(relay1, LOW);   // turn relay 1 ON
-  digitalWrite(relay2, HIGH);  // turn relay 2 OFF
+   // turn relay 2 OFF
   // if the file opened okay, write to it:
   if (myFile) {
     while (naye<upbutton) {
+      currentTime=millis();
       Serial.print(digitalRead(upbutton));
       Serial.print("Writing to test.txt...");
-      if (naye % 5 == 0) {
+      if (currentTime - lastTime >= 5000) {
+        Wire.begin();
+  while (!sensor.init()) {
+    Serial.println("Init failed!");
+    Serial.println("Are SDA/SCL connected correctly?");
+    Serial.println("Blue Robotics Bar30: White=SDA, Green=SCL");
+    Serial.println("\n\n\n");
+    delay(5000);
+  }
+
+  // .init sets the sensor model for us but we can override it if required.
+  // Uncomment the next line to force the sensor model to the MS5837_30BA.
+  sensor.setModel(MS5837::MS5837_30BA);
+
+  sensor.setFluidDensity(997);
         sensor.read();
         total++;
-        myFile.println("Jalpari,"+timeClient.getFormattedTime() + ","+(sensor.pressure()/10)+","+sensor.depth());
-      }
+        lastTime = currentTime;
+        Serial.print("reah");
+        myFile.println("Jalpari," + timeClient.getFormattedTime() + "," + (sensor.pressure() * 100) + "," + sensor.depth());
+        digitalWrite(relay1, LOW);   // turn relay 1 ON
+        digitalWrite(relay2, HIGH);
+    } else if ((currentTime - lastTime) >= 4000 && (currentTime - lastTime) < 5000) {
+        Serial.print("ree");
+        digitalWrite(relay1, HIGH);   // turn relay 1 OFF
+        digitalWrite(relay2, HIGH);   // turn relay 2 ON
+    } else if (currentTime - lastTime >= 5000) {
+        digitalWrite(relay2, LOW);   // turn relay 2 OFF
+}
+
       // close the file:
       Serial.println("done.");
       naye++;
@@ -206,38 +242,45 @@ void executeCode() {
     Serial.println("error opening test.txt");
   }
   Serial.print("here");
-  myFile = SD.open("/test.txt", FILE_APPEND);
-  digitalWrite(relay1, LOW);  // turn relay 1 ON
-  digitalWrite(relay2, LOW);  // turn relay 2 OFF
-  if (myFile) {
-    while (naye1 <= 2) {
-      Serial.print("Writing to test.txt...");
-      if (naye1 % 5== 0) {
-        sensor.read();
-        myFile.println("Jalpari,"+timeClient.getFormattedTime() + ","+(sensor.pressure()/10)+","+sensor.depth());
-      }
-      // close the file:
-      Serial.println("done.");
-      naye1++;
-      delay(1000);
-    }
-    myFile.close();
-  } else {
-    // if the file didn't open, print an error:
-    Serial.println("error opening test.txt");
-  }
-  myFile = SD.open("/test.txt", FILE_APPEND);
   digitalWrite(relay1, HIGH);  // turn relay 1 ON
-  digitalWrite(relay2, LOW);   // turn relay 2 OFF
+  digitalWrite(relay2, HIGH);  // turn relay 2 OFF
+  myFile = SD.open("/test.txt", FILE_APPEND);
+    // turn relay 2 OFF
   if (myFile) {
     while (naye2<downbutton) {
       Serial.print(digitalRead(downbutton));
       Serial.print("Writing to test.txt...");
-      if ((naye2+3) % 5 == 0) {
+      currentTime=millis();
+      if (currentTime - lastTime >= 5000) {
+        Wire.begin();
+  while (!sensor.init()) {
+    Serial.println("Init failed!");
+    Serial.println("Are SDA/SCL connected correctly?");
+    Serial.println("Blue Robotics Bar30: White=SDA, Green=SCL");
+    Serial.println("\n\n\n");
+    delay(5000);
+  }
+
+  // .init sets the sensor model for us but we can override it if required.
+  // Uncomment the next line to force the sensor model to the MS5837_30BA.
+  sensor.setModel(MS5837::MS5837_30BA);
+
+  sensor.setFluidDensity(997);
         sensor.read();
         total++;
-        myFile.println("Jalpari,"+timeClient.getFormattedTime() + ","+(sensor.pressure()/10)+","+sensor.depth());
-      }
+        lastTime = currentTime;
+        Serial.print("reah");
+        myFile.println("Jalpari," + timeClient.getFormattedTime() + "," + (sensor.pressure() * 100) + "," + sensor.depth());
+        digitalWrite(relay1, HIGH);   // turn relay 1 ON
+        digitalWrite(relay2, LOW);
+    } else if ((currentTime - lastTime) >= 4000 && (currentTime - lastTime) < 5000) {
+        Serial.print("ree");
+        digitalWrite(relay1, HIGH);   // turn relay 1 OFF
+        digitalWrite(relay2, HIGH);   // turn relay 2 ON
+    } else if (currentTime - lastTime >= 5000) {
+        digitalWrite(relay1, LOW);   // turn relay 2 OFF
+}
+
       // close the file:
       Serial.println("done.");
       naye2++;
@@ -249,8 +292,8 @@ void executeCode() {
     // if the file didn't open, print an error:
     Serial.println("error opening test.txt");
   }
-  digitalWrite(relay1, LOW);  // turn relay 1 ON
-  digitalWrite(relay2, LOW);  // turn relay 2 OFF
+  digitalWrite(relay1, HIGH);  // turn relay 1 ON
+  digitalWrite(relay2, HIGH);  // turn relay 2 OFF
   delay(1000);
 
   if (SDCARD_CS > 0) {
@@ -318,9 +361,9 @@ void executeCode2()
   for (int k=0;k<3;k++){
     sensor.read();
     LoRa.beginPacket();
-    LoRa.print("Jalpari,"+timeClient.getFormattedTime() + ","+(sensor.pressure()/10)+","+sensor.depth());
+    LoRa.print("Jalpari,"+timeClient.getFormattedTime() + ","+(sensor.pressure()*100)+","+sensor.depth());
     LoRa.print("\n");
-    Serial.print("Jalpari,"+timeClient.getFormattedTime() + ","+(sensor.pressure()/10)+","+sensor.depth());
+    Serial.print("Jalpari,"+timeClient.getFormattedTime() + ","+(sensor.pressure()*100)+","+sensor.depth());
     LoRa.endPacket();
     delay(1000);
 
@@ -329,4 +372,19 @@ void executeCode2()
   LoRa.print("poda");
   LoRa.endPacket();
   delay(1000);
+}
+void executeCode3(){
+  digitalWrite(relay1, HIGH);   // turn relay 1 ON
+  digitalWrite(relay2, LOW);
+  delay(2000);
+  digitalWrite(relay1, HIGH);   // turn relay 1 ON
+  digitalWrite(relay2, HIGH);
+
+}
+void executeCode4(){
+  digitalWrite(relay1, LOW);   // turn relay 1 ON
+  digitalWrite(relay2, HIGH);
+  delay(2000);
+  digitalWrite(relay1, HIGH);   // turn relay 1 ON
+  digitalWrite(relay2, HIGH);
 }
