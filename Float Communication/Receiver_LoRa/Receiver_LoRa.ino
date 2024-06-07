@@ -8,7 +8,7 @@
 
 //define the pins used by the transceiver module
 #define ss 18
-#define rst 14
+#define rst 23
 #define dio0 26
 #define SCK 5
 #define MISO 19
@@ -63,6 +63,12 @@ void loop() {
     else if (data.startsWith("uptime")){
       uptimeValue = data.substring(6).toInt();
       button2();
+    }
+    else if (data == "Barelyup"){
+      button3();
+    }
+    else if (data=="Barelydown"){
+      button4();
     }
   }
   // try to parse packet
@@ -175,6 +181,36 @@ void button2()
   delay(100);
   LoRa.beginPacket();
   LoRa.print("hi"+uptimeValue);
+  LoRa.endPacket();
+  delay(100);
+}
+void button3()
+{
+  LoRa.beginPacket();
+  LoRa.print("ho");
+  LoRa.endPacket();
+  delay(100);
+  LoRa.beginPacket();
+  LoRa.print("ho");
+  LoRa.endPacket();
+  delay(100);
+  LoRa.beginPacket();
+  LoRa.print("ho");
+  LoRa.endPacket();
+  delay(100);
+}
+void button4()
+{
+  LoRa.beginPacket();
+  LoRa.print("hoe");
+  LoRa.endPacket();
+  delay(100);
+  LoRa.beginPacket();
+  LoRa.print("hoe");
+  LoRa.endPacket();
+  delay(100);
+  LoRa.beginPacket();
+  LoRa.print("hoe");
   LoRa.endPacket();
   delay(100);
 }
