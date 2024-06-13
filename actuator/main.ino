@@ -5,7 +5,7 @@
 Adafruit_SHT4x sht4 = Adafruit_SHT4x();
 
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED }; // each arduino should have different MAC address. you can set it to whatever you want if it is an arduino NANO
-IPAddress client_ip(192, 168, 2, 100);   // IP address of Arduino
+IPAddress client_ip(192, 168, 2, 169);   // IP address of Arduino
 IPAddress server_ip(192, 168, 2, 22);   // IP address of the laptop
 unsigned int localPort = 12345;   // Local port number to listen on
 char packetBuffer[100];  // Buffer to store incoming packets
@@ -19,11 +19,13 @@ void setup() {
   while (!Serial) delay(10);     // will pause Zero, Leonardo, etc until serial console opens
   if (! sht4.begin()) {
     Serial.println("Couldn't find SHT4x");
-    while (1) delay(1);
   }
-  Serial.println("Found SHT4x sensor");
-  sht4.setPrecision(SHT4X_HIGH_PRECISION);
-  sht4.setHeater(SHT4X_NO_HEATER);  
+  else
+  {
+    Serial.println("Found SHT4x sensor");
+    sht4.setPrecision(SHT4X_HIGH_PRECISION);
+    sht4.setHeater(SHT4X_NO_HEATER);  
+  }
   Serial.println("UDP client started");
   Ethernet.begin(mac,client_ip);
   Serial.print("my ip is : ");
@@ -34,8 +36,9 @@ void setup() {
 
 void loop() {
   sensors_event_t humidity, temp;
-  sht4.getEvent(&humidity, &temp);
-  float val = temp.temperature;
+  float val;
+  if(!sht4.getEvent(&humidity, &temp)) val = 12.34;
+  else val = temp.temperature;
   send_temp_data(val);
   packetSize = udp.parsePacket();
   if (packetSize > 0) {
